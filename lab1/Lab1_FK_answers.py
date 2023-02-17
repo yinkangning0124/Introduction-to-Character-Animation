@@ -77,9 +77,33 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         1. joint_orientations的四元数顺序为(x, y, z, w)
         2. from_euler时注意使用大写的XYZ
     """
+    one_frame_data = motion_data[frame_id]
+    joint_positions = []
+    joint_orientations = []
+    one_frame_data = one_frame_data.reshape(-1, 3)
+    quaternion = R.from_euler('XYZ', one_frame_data[1:], degrees=True).as_quat()
+    for name in joint_name:
+        if '_end' in name:
+            ind = joint_name.index(name)
+            quaternion = np.insert(quaternion, ind, [0, 0, 0, 1], axis=0)
+    # finish the computation of quaternions
 
-    joint_positions = None
-    joint_orientations = None
+    for i in range(len(joint_name)):
+        if i == 0:
+            joint_orientations.append(quaternion[0])
+            joint_positions.append(one_frame_data[0])
+        else:
+            parent = joint_parent[i]
+            Quat = R.from_quat(quaternion) # convert quaternion to a rotation
+            orientation = R.as_quat(Quat[parent] * Quat[i])
+            joint_orientations.append(orientation)
+            joint_orientations_quat = R.from_quat(joint_orientations)
+            offset_under_rotation = joint_orientations_quat[parent].apply(joint_offset[i])
+            joint_positions.append(joint_positions[parent] + offset_under_rotation)
+
+    joint_orientations = np.array(joint_orientations)
+    joint_positions = np.array(joint_positions)
+
     return joint_positions, joint_orientations
 
 
