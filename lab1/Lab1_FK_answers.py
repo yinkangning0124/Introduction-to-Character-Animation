@@ -93,11 +93,12 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
             joint_orientations.append(quaternion[0])
             joint_positions.append(one_frame_data[0])
         else:
-            parent = joint_parent[i]
-            Quat = R.from_quat(quaternion) # convert quaternion to a rotation
-            orientation = R.as_quat(Quat[parent] * Quat[i])
-            joint_orientations.append(orientation)
             joint_orientations_quat = R.from_quat(joint_orientations)
+            parent = joint_parent[i]
+            Quat = R.from_quat(quaternion)  # convert quaternion to a rotation
+            orientation = R.as_quat(joint_orientations_quat[parent] * Quat[i])  # the production can switch???
+            joint_orientations.append(orientation)
+            #joint_orientations_quat = R.from_quat(joint_orientations)
             offset_under_rotation = joint_orientations_quat[parent].apply(joint_offset[i])
             joint_positions.append(joint_positions[parent] + offset_under_rotation)
 
