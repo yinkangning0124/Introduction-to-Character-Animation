@@ -1,0 +1,4 @@
+__pycache__/
+*.npy
+/lab1/try_scipy.py
+
