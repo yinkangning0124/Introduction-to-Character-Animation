@@ -118,5 +118,45 @@ def part3_retarget_func(T_pose_bvh_path, A_pose_bvh_path):
         两个bvh的joint name顺序可能不一致哦(
         as_euler时也需要大写的XYZ
     """
-    motion_data = None
+    joint_remove_end_A = []
+    joint_remove_end_T = []
+    motion_data_per_joint = {}
+
+    (joint_name_T, joint_parent_T, joint_offset_T) = part1_calculate_T_pose(T_pose_bvh_path)
+    (joint_name_A, joint_parent_A, joint_offset_A) = part1_calculate_T_pose(A_pose_bvh_path)
+
+    motion_data_A = load_motion_data(A_pose_bvh_path)
+    root_position = motion_data_A[:, :3]
+    motion_data_A = motion_data_A[:, 3:]
+
+    motion_data = np.zeros_like(motion_data_A)
+
+    for name in joint_name_T:
+        if '_end' not in name:
+            joint_remove_end_T.append(name)
+
+    for name in joint_name_A:
+        if '_end' not in name:
+            joint_remove_end_A.append(name)
+
+    for index, name in enumerate(joint_remove_end_A):
+        motion_data_per_joint[name] = motion_data_A[:, 3*index:3*(index+1)]
+        print(motion_data_per_joint[name].shape)
+    for index, name in enumerate(joint_remove_end_T):
+        if name == 'lShoulder':
+            r1 = R.from_euler('XYZ', [0, 0, -45], degrees=True)
+            r2 = R.from_euler('XYZ', motion_data_per_joint[name], degrees=True)
+            r_res = R.as_euler((r1 * r2), 'XYZ', degrees=True)
+            motion_data_per_joint[name] = r_res
+            # motion_data_per_joint[name][:, 2] -= 45
+        elif name == 'rShoulder':
+            r1 = R.from_euler('XYZ', [0, 0, 45], degrees=True)
+            r2 = R.from_euler('XYZ', motion_data_per_joint[name], degrees=True)
+            r_res = R.as_euler((r1 * r2), 'XYZ', degrees=True)
+            motion_data_per_joint[name] = r_res
+            # motion_data_per_joint[name][:, 2] += 45
+        motion_data[:, 3*index:3*(index+1)] = motion_data_per_joint[name]
+    motion_data = np.concatenate([root_position, motion_data], axis=1)
+
     return motion_data
+
