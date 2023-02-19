@@ -22,7 +22,7 @@ def CCD(meta_data, joint_positions, joint_orientations, target_pose): # TODO fin
 
     cnt = 0
     end_index = path_name.index(meta_data.end_joint)
-    while np.linalg.norm(joint_positions[path[end_index]]) >= 1e-2 and cnt <= 15:
+    while np.linalg.norm(joint_positions[path[end_index]]) >= 1e-2 and cnt <= 10:
         for i in range(end_index):
             current_index = end_index - 1 - i
             current_position = path_positions[current_index]
@@ -93,7 +93,7 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
         joint_orientations[path2[i + 1]] = path_orientations[i].as_quat()
     joint_orientations[path2[-1]] = path_orientations[len(path2) - 1].as_quat()
     for i in range(len(path1) - 1):
-        joint_orientations[path1[~i]] = path_orientations[i + len(path2)].as_quat()
+        joint_orientations[path1[-i]] = path_orientations[i + len(path2)].as_quat()
 
     for i in range(len(path)):
         joint_positions[path[i]] = path_positions[i]
@@ -115,6 +115,33 @@ def part2_inverse_kinematics(meta_data, joint_positions, joint_orientations, rel
     """
     输入lWrist相对于RootJoint前进方向的xz偏移，以及目标高度，IK以外的部分与bvh一致
     """
+    target_pose = np.array([joint_positions[0][0] + relative_x, target_height, joint_positions[0][2] + relative_z])
+    path_positions, path_orientations = CCD(meta_data, joint_positions, joint_orientations, target_pose)
+    path, path_name, _, _ = meta_data.get_path_from_root_to_end()
+
+    joint_rotations = R.identity(len(meta_data.joint_parent))
+    for i in range(len(meta_data.joint_parent)):
+        if meta_data.joint_parent[i] == -1:
+            joint_rotations[i] = R.from_quat(joint_orientations[i])
+        else:
+            joint_rotations[i] = R.inv(R.from_quat(joint_orientations[meta_data.joint_parent[i]])) * R.from_quat(joint_orientations[i])
+
+    # calculate the rotation and position of path joints
+    for i in range(len(path)):
+        joint_positions[path[i]] = path_positions[i]
+        joint_orientations[path[i]] = path_orientations[i].as_quat()
+
+    #joint_orientations[path[-1]] = (R.from_quat(joint_orientations[path[-1]]) * R.from_euler('XYZ', [-90, 0, 0], degrees=True)).as_quat()
+    # calculate the rotation and position of other joints
+    for i in range(len(meta_data.joint_parent)):
+        if meta_data.joint_parent[i] == -1:
+            continue
+        if meta_data.joint_name[i] not in path_name:
+            joint_orientations[i] = (R.from_quat(joint_orientations[meta_data.joint_parent[i]]) * joint_rotations[i]).as_quat()
+            joint_positions[i] = joint_positions[meta_data.joint_parent[i]] + \
+                R.from_quat(joint_orientations[meta_data.joint_parent[i]]).apply(meta_data.joint_initial_position[i] - \
+                                                            meta_data.joint_initial_position[meta_data.joint_parent[i]])
+
 
     return joint_positions, joint_orientations
 
