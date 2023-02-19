@@ -1,10 +1,12 @@
 from task1_forward_kinematics import *
 from scipy.spatial.transform import Rotation as R
-from Lab2_IK_answers import *
+from Lab2_IK_answers import *\
+
+
 class MetaData:
     def __init__(self, joint_name, joint_parent, joint_initial_position, root_joint, end_joint):
         """
-        一些固定信息，其中joint_initial_position是T-pose下的关节位置，可以用于计算关节相互的offset
+        一些固定信息，其中joint_initial_position是T-pose下的global关节位置，可以用于计算关节相互的offset
         root_joint是固定节点的索引，并不是RootJoint节点
         """
         self.joint_name = joint_name
@@ -25,17 +27,16 @@ class MetaData:
             在这个例子下path2返回从脚到根节点的路径，path1返回从根节点到手的路径。
             你可能会需要这两个输出。
         """
-        
         # 从end节点开始，一直往上找，直到找到腰部节点
         path1 = [self.joint_name.index(self.end_joint)]
         while self.joint_parent[path1[-1]] != -1:
-            path1.append(self.joint_parent[path1[-1]])
+            path1.append(self.joint_parent[path1[-1]])  # path1 contains from end joint to RootJoint (include RJ)
             
         # 从root节点开始，一直往上找，直到找到腰部节点
         path2 = [self.joint_name.index(self.root_joint)]
         while self.joint_parent[path2[-1]] != -1:
-            path2.append(self.joint_parent[path2[-1]])
-        
+            path2.append(self.joint_parent[path2[-1]])  # path2 contains from root joint to RootJoint (include RJ)
+
         # 合并路径，消去重复的节点
         while path1 and path2 and path2[-1] == path1[-1]:
             path1.pop()
@@ -45,8 +46,6 @@ class MetaData:
         path = path2 + list(reversed(path1))
         path_name = [self.joint_name[i] for i in path]
         return path, path_name, path1, path2
-    
-
 
 
 def part1_simple(viewer, target_pos):
@@ -168,14 +167,15 @@ def main():
     viewer = SimpleViewer()
     
     # part1
-    # part1_simple(viewer, np.array([0.5, 0.75, 0.5]))
-    # part1_hard(viewer, np.array([0.5, 0.5, 0.5]))
+    #part1_simple(viewer, np.array([0.5, 0.75, 0.5]))
+    part1_hard(viewer, np.array([0.5, 0.5, 0.5]))
     # part1_animation(viewer, np.array([0.5, 0.5, 0.5]))
     
     # part2
     # part2(viewer, 'data/walk60.bvh')
     
     # bonus(viewer, np.array([0.5, 0.5, 0.5]), np.array([0, 0.5, 0.5]))
+
 
 if __name__ == "__main__":
     main()
